@@ -1,6 +1,6 @@
 // Repository:  medals-b-react
 // Author:      Jeff Grissom
-// Version:     6.xx
+// Version:     7.xx-01
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Country from './components/Country';
@@ -46,17 +46,28 @@ const App = () => {
       }
     }
   }
-  const handleIncrement = (countryId, medalName) => {
+  const handleIncrement = (countryId, medalName) => handleUpdate(countryId, medalName, 1);
+  const handleDecrement = (countryId, medalName) =>  handleUpdate(countryId, medalName, -1)
+  const handleUpdate = async (countryId, medalName, factor) => {
+    const originalCountries = countries;
     const idx = countries.findIndex(c => c.id === countryId);
     const mutableCountries = [...countries ];
-    mutableCountries[idx][medalName] += 1;
+    mutableCountries[idx][medalName] += (1 * factor);
     setCountries(mutableCountries);
-  }
-  const handleDecrement = (countryId, medalName) => {
-    const idx = countries.findIndex(c => c.id === countryId);
-    const mutableCountries = [...countries ];
-    mutableCountries[idx][medalName] -= 1;
-    setCountries(mutableCountries);
+    const jsonPatch = [{ op: "replace", path: medalName, value: mutableCountries[idx][medalName] }];
+    console.log(`json patch for id: ${countryId}: ${JSON.stringify(jsonPatch)}`);
+
+    try {
+      await axios.patch(`${apiEndpoint}/${countryId}`, jsonPatch);
+    } catch (ex) {
+      if (ex.response && ex.response.status === 404) {
+        // country already deleted
+        console.log("The record does not exist - it may have already been deleted");
+      } else { 
+        alert('An error occurred while updating');
+        setCountries(originalCountries);
+      }
+    }
   }
   const getAllMedalsTotal = () => {
     let sum = 0;
